@@ -45,8 +45,7 @@
   .codes { list-style:none; padding:0; margin:12px 0 0; }
   .codes li { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #eee; }
   .codes b { font-family:ui-monospace,monospace; letter-spacing:.1em; color:var(--red); }
-  .have { margin-top:16px; color:var(--muted); }
-  .have summary { cursor:pointer; min-height:44px; display:flex; align-items:center; }
+  .have { margin-top:8px; padding-top:16px; border-top:1px dashed #ddd; }
   .hide { display:none; }
   pre { white-space:pre-wrap; font:inherit; background:#f6f6f6; padding:10px; border-radius:8px; margin:4px 0 0; }
 </style>
@@ -71,13 +70,15 @@
       <button type="submit" id="joinBtn">Join Secret Santa</button>
       <div id="joinMsg" class="msg" role="status"></div>
     </form>
-    <details id="haveCode" class="have">
-      <summary>Already joined on another phone? Load my entry</summary>
-      <label for="loadCode">Your personal code</label>
-      <input id="loadCode" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false">
-      <button type="button" class="secondary" id="loadBtn">Load my entry</button>
-      <div id="loadMsg" class="msg err" role="status"></div>
-    </details>
+    <div id="haveCode" class="have">
+      <button type="button" class="secondary" id="haveBtn" aria-expanded="false" aria-controls="loadPanel">🔑 Already joined? Load my entry</button>
+      <div id="loadPanel" class="hide">
+        <label for="loadCode">Your personal code</label>
+        <input id="loadCode" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. A1B2C3">
+        <button type="button" id="loadBtn">Load my entry</button>
+        <div id="loadMsg" class="msg err" role="status"></div>
+      </div>
+    </div>
   </section>
 
   <section id="codeCard" class="hide">

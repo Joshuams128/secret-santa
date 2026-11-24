@@ -87,6 +87,11 @@ async function loadEntry(code, quiet) {
     else { $('loadMsg').textContent = err.message; }
   }
 }
+$('haveBtn').onclick = () => {
+  const open = $('loadPanel').classList.toggle('hide') === false;
+  $('haveBtn').setAttribute('aria-expanded', open);
+  if (open) $('loadCode').focus();
+};
 $('loadBtn').onclick = () => { $('loadMsg').textContent = ''; loadEntry($('loadCode').value.trim().toUpperCase(), false); };
 
 $('revealForm').onsubmit = async e => {
