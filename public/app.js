@@ -56,13 +56,29 @@ $('revealForm').onsubmit = async e => {
   } catch (err) { $('revealMsg').textContent = err.message; }
 };
 
+let adminPin = '';
 async function admin(action, extra = {}, confirmMsg) {
   if (confirmMsg && !confirm(confirmMsg)) return;
   $('adminMsg').className = 'msg';
-  try { await api('admin/' + action, { pin: $('pin').value, ...extra });
-        $('adminMsg').textContent = 'Done ✓'; refresh(); }
-  catch (err) { $('adminMsg').textContent = err.message; $('adminMsg').className = 'msg err'; }
+  try { await api('admin/' + action, { pin: adminPin, ...extra });
+        $('adminMsg').textContent = 'Done ✓'; refresh(); return true; }
+  catch (err) { $('adminMsg').textContent = err.message; $('adminMsg').className = 'msg err'; return false; }
 }
+function setUnlocked(on) {
+  $('orgTools').classList.toggle('hide', !on);
+  $('unlockForm').classList.toggle('hide', on);
+  if (!on) { adminPin = ''; $('pin').value = ''; $('newNotes').value = ''; }
+}
+$('orgLink').onclick = () => {
+  $('orgLinkWrap').classList.add('hide'); $('orgCard').classList.remove('hide');
+  $('pin').focus(); $('orgCard').scrollIntoView({ behavior: 'smooth' });
+};
+$('unlockForm').onsubmit = async e => {
+  e.preventDefault(); adminPin = $('pin').value;
+  if (await admin('check')) { setUnlocked(true); $('newNotes').value = state.notes; $('adminMsg').textContent = ''; }
+  else adminPin = '';
+};
+$('lockBtn').onclick = () => { setUnlocked(false); $('adminMsg').textContent = ''; $('orgCard').classList.add('hide'); $('orgLinkWrap').classList.remove('hide'); };
 $('saveNotes').onclick = () => admin('notes', { notes: $('newNotes').value });
 $('drawBtn').onclick = () => admin('draw', {}, 'Draw names now? No one can join afterward.');
 $('resetBtn').onclick = () => admin('reset', {}, 'Delete all participants and start over?');

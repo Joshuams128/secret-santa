@@ -41,6 +41,7 @@
   .code { font-size:2rem; letter-spacing:.2em; text-align:center; font-weight:800; color:var(--red); }
   ul { padding-left:20px; margin:0; }
   .hint { margin:12px 0 0; padding:10px 12px; background:#fff8e1; border-radius:8px; text-align:center; }
+  .linkbtn { width:auto; min-height:44px; margin:0; padding:8px 16px; background:none; color:var(--muted); font-weight:500; text-decoration:underline; }
   .hide { display:none; }
   pre { white-space:pre-wrap; font:inherit; background:#f6f6f6; padding:10px; border-radius:8px; margin:4px 0 0; }
 </style>
@@ -91,16 +92,24 @@
     <div id="revealMsg" class="msg err"></div>
   </section>
 
-  <section>
+  <div id="orgLinkWrap" style="text-align:center"><button type="button" class="linkbtn" id="orgLink">🔐 Organizer login</button></div>
+
+  <section id="orgCard" class="hide">
     <h2>🔐 Organizer</h2>
-    <label for="pin">Organizer PIN</label>
-    <input id="pin" type="password" autocomplete="off">
-    <label for="newNotes">Update notes / budget</label>
-    <textarea id="newNotes" style="min-height:60px" placeholder="e.g. Budget: $25 max"></textarea>
-    <button class="secondary" id="saveNotes">Save notes</button>
-    <button id="drawBtn">Draw names</button>
-    <button class="danger" id="resetBtn">Reset everything</button>
-    <div id="adminMsg" class="msg"></div>
+    <form id="unlockForm">
+      <label for="pin">Organizer PIN</label>
+      <input id="pin" type="password" autocomplete="off">
+      <button type="submit">Unlock</button>
+    </form>
+    <div id="orgTools" class="hide">
+      <label for="newNotes">Update notes / budget</label>
+      <textarea id="newNotes" style="min-height:60px" placeholder="e.g. Budget: $25 max"></textarea>
+      <button class="secondary" id="saveNotes">Save notes</button>
+      <button id="drawBtn">Draw names</button>
+      <button class="danger" id="resetBtn">Reset everything</button>
+      <button class="secondary" id="lockBtn">Lock</button>
+    </div>
+    <div id="adminMsg" class="msg" role="status"></div>
   </section>
 </main>
 <script src="app.js"></script>
