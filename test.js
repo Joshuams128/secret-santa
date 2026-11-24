@@ -33,5 +33,10 @@ const { handle } = require('./lib/handler');
 
   reply = url => url.includes('ss_settings') ? [200, [{ drawn: true }]] : [200, []];
   assert.strictEqual((await handle('POST', 'reveal', { code: "1' or '1" }))[0], 404);
+  reply = () => [200, [{ name: 'A', code: 'AAAAAA' }]];
+  assert.strictEqual((await handle('POST', 'admin/codes', { pin: 'bad' }))[0], 403);
+  const c = await handle('POST', 'admin/codes', { pin: '1234' });
+  assert.deepStrictEqual(c[1], { people: [{ name: 'A', code: 'AAAAAA' }] });
+  assert.ok(calls.at(-1).url.includes('select=name,code') && !calls.at(-1).url.includes('give_to'), 'codes query never selects matches');
   console.log('handler OK');
 })().catch(e => { console.error(e); process.exit(1); });

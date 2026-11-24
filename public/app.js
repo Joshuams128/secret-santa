@@ -67,7 +67,7 @@ async function admin(action, extra = {}, confirmMsg) {
 function setUnlocked(on) {
   $('orgTools').classList.toggle('hide', !on);
   $('unlockForm').classList.toggle('hide', on);
-  if (!on) { adminPin = ''; $('pin').value = ''; $('newNotes').value = ''; }
+  if (!on) { adminPin = ''; $('pin').value = ''; $('newNotes').value = ''; $('codesList').innerHTML = ''; $('codesList').classList.add('hide'); }
 }
 $('orgLink').onclick = () => {
   $('orgLinkWrap').classList.add('hide'); $('orgCard').classList.remove('hide');
@@ -79,6 +79,15 @@ $('unlockForm').onsubmit = async e => {
   else adminPin = '';
 };
 $('lockBtn').onclick = () => { setUnlocked(false); $('adminMsg').textContent = ''; $('orgCard').classList.add('hide'); $('orgLinkWrap').classList.remove('hide'); };
+$('codesBtn').onclick = async () => {
+  try {
+    const { people } = await api('admin/codes', { pin: adminPin });
+    $('codesList').innerHTML = people.length
+      ? people.map(p => `<li><span>${esc(p.name)}</span><b>${esc(p.code)}</b></li>`).join('')
+      : '<li>No one has joined yet.</li>';
+    $('codesList').classList.remove('hide'); $('adminMsg').textContent = '';
+  } catch (err) { $('adminMsg').textContent = err.message; $('adminMsg').className = 'msg err'; }
+};
 $('saveNotes').onclick = () => admin('notes', { notes: $('newNotes').value });
 $('drawBtn').onclick = () => admin('draw', {}, 'Draw names now? No one can join afterward.');
 $('resetBtn').onclick = () => admin('reset', {}, 'Delete all participants and start over?');
