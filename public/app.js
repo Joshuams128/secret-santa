@@ -17,7 +17,7 @@ async function refresh() {
   $('people').innerHTML = state.participants.map(p => `<li>${esc(p.name)} <small>— ${label[p.date]}</small></li>`).join('');
   if (!$('dates').children.length) {
     $('dates').innerHTML = state.dates.map((d, i) =>
-      `<div><input type="radio" name="date" id="d${i}" value="${d.id}" required><label for="d${i}">${d.label}<small id="t${i}"></small></label></div>`).join('');
+      `<div><input type="radio" name="date" id="d${i}" value="${d.id}" required><label for="d${i}"><span>${d.label.split(', ')[0]}</span><b>${d.label.split(', ')[1]}</b><small id="t${i}"></small></label></div>`).join('');
   }
   state.dates.forEach((d, i) => { $('t' + i).textContent = `${state.tally[d.id]} going`; });
   $('joinCard').classList.toggle('hide', state.drawn);
