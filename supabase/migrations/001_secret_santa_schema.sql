@@ -45,7 +45,7 @@ end $$;
 
 create or replace function public.ss_reset()
 returns void language sql security invoker set search_path = public as $$
-  delete from ss_participants;
+  delete from ss_participants where true;  -- API blocks DELETE without WHERE (see 003)
   update ss_settings set drawn = false where id = 1;
 $$;
 
