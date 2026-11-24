@@ -26,21 +26,68 @@ async function refresh() {
     : 'Names haven’t been drawn yet — check back once everyone has joined.';
 }
 
+let myCode = null;   // set once this phone has joined (or loaded an entry)
+
+function showMyCode(code) {
+  $('myCode').textContent = code; $('code').value = code;
+  $('codeCard').classList.remove('hide');
+}
+// Switch the join card into "edit my entry" mode and fill it in.
+function enterEditMode(entry, code) {
+  myCode = code; store.set('santaCode', code);
+  $('name').value = entry.name; $('wishlist').value = entry.wishlist; $('pnotes').value = entry.notes;
+  const radio = document.querySelector(`input[name=date][value="${entry.date}"]`);
+  if (radio) radio.checked = true;
+  $('joinTitle').textContent = 'Edit your entry';
+  $('welcomeBack').textContent = `Welcome back, ${entry.name}! Change anything below until names are drawn.`;
+  $('welcomeBack').classList.remove('hide');
+  $('joinBtn').textContent = 'Save changes';
+  $('haveCode').classList.add('hide');
+  showMyCode(code);
+}
+function leaveEditMode() {
+  myCode = null; store.set('santaCode', '');
+  $('joinTitle').textContent = 'Join the fun'; $('welcomeBack').classList.add('hide');
+  $('joinBtn').textContent = 'Join Secret Santa'; $('haveCode').classList.remove('hide');
+  $('codeCard').classList.add('hide');
+}
+
 $('joinForm').onsubmit = async e => {
   e.preventDefault();
   $('joinMsg').textContent = ''; $('joinMsg').className = 'msg';
+  const entry = {
+    name: $('name').value, wishlist: $('wishlist').value, notes: $('pnotes').value,
+    date: document.querySelector('input[name=date]:checked')?.value,
+  };
   try {
-    const { code } = await api('join', {
-      name: $('name').value, wishlist: $('wishlist').value, notes: $('pnotes').value,
-      date: document.querySelector('input[name=date]:checked')?.value,
-    });
-    store.set('santaCode', code);
-    $('myCode').textContent = code; $('code').value = code;
-    $('codeCard').classList.remove('hide'); $('joinCard').classList.add('hide');
-    $('codeCard').scrollIntoView({ behavior: 'smooth' });
+    if (myCode) {
+      await api('update', { code: myCode, ...entry });
+      $('joinMsg').textContent = 'Saved ✓'; $('welcomeBack').textContent = `Welcome back, ${entry.name.trim()}! Change anything below until names are drawn.`;
+    } else {
+      const { code } = await api('join', entry);
+      enterEditMode({ ...entry, name: entry.name.trim() }, code);
+      $('joinMsg').textContent = 'You’re in! Your code is below.';
+      $('codeCard').scrollIntoView({ behavior: 'smooth' });
+    }
     refresh();
-  } catch (err) { $('joinMsg').textContent = err.message; $('joinMsg').className = 'msg err'; }
+  } catch (err) {
+    if (myCode && /not found/i.test(err.message)) { leaveEditMode(); err = new Error('The organizer reset the game, so please join again.'); }
+    $('joinMsg').textContent = err.message; $('joinMsg').className = 'msg err';
+  }
 };
+
+// Load an entry by code (another phone, or cleared browser data).
+async function loadEntry(code, quiet) {
+  try {
+    const r = await api('lookup', { code });
+    if (r.drawn) { myCode = r.code; store.set('santaCode', r.code); $('code').value = r.code; return; }
+    enterEditMode(r.entry, r.code);
+  } catch (err) {
+    if (quiet) { if (/not found/i.test(err.message)) store.set('santaCode', ''); }
+    else { $('loadMsg').textContent = err.message; }
+  }
+}
+$('loadBtn').onclick = () => { $('loadMsg').textContent = ''; loadEntry($('loadCode').value.trim().toUpperCase(), false); };
 
 $('revealForm').onsubmit = async e => {
   e.preventDefault(); $('revealMsg').textContent = ''; $('result').classList.add('hide');
@@ -93,6 +140,5 @@ $('drawBtn').onclick = () => admin('draw', {}, 'Draw names now? No one can join 
 $('resetBtn').onclick = () => admin('reset', {}, 'Delete all participants and start over?');
 
 const saved = store.get('santaCode');
-if (saved) $('code').value = saved;
-refresh();
+refresh().then(() => { if (saved) { $('code').value = saved; loadEntry(saved, true); } });
 setInterval(refresh, 15000);

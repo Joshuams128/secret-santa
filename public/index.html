@@ -45,6 +45,8 @@
   .codes { list-style:none; padding:0; margin:12px 0 0; }
   .codes li { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #eee; }
   .codes b { font-family:ui-monospace,monospace; letter-spacing:.1em; color:var(--red); }
+  .have { margin-top:16px; color:var(--muted); }
+  .have summary { cursor:pointer; min-height:44px; display:flex; align-items:center; }
   .hide { display:none; }
   pre { white-space:pre-wrap; font:inherit; background:#f6f6f6; padding:10px; border-radius:8px; margin:4px 0 0; }
 </style>
@@ -55,7 +57,8 @@
   <section><h2>📝 Notes from the organizer</h2><div id="notes" class="note"></div></section>
 
   <section id="joinCard">
-    <h2>Join the fun</h2>
+    <h2 id="joinTitle">Join the fun</h2>
+    <p id="welcomeBack" class="hide"></p>
     <form id="joinForm">
       <label for="name">Your name</label>
       <input id="name" maxlength="40" required autocomplete="given-name" autocapitalize="words">
@@ -65,9 +68,16 @@
       <textarea id="pnotes" maxlength="500" style="min-height:60px"></textarea>
       <label>Which meet-up date works for you?</label>
       <div class="dates" id="dates"></div>
-      <button type="submit">Join Secret Santa</button>
+      <button type="submit" id="joinBtn">Join Secret Santa</button>
       <div id="joinMsg" class="msg" role="status"></div>
     </form>
+    <details id="haveCode" class="have">
+      <summary>Already joined on another phone? Load my entry</summary>
+      <label for="loadCode">Your personal code</label>
+      <input id="loadCode" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button type="button" class="secondary" id="loadBtn">Load my entry</button>
+      <div id="loadMsg" class="msg err" role="status"></div>
+    </details>
   </section>
 
   <section id="codeCard" class="hide">

@@ -38,5 +38,24 @@ const { handle } = require('./lib/handler');
   const c = await handle('POST', 'admin/codes', { pin: '1234' });
   assert.deepStrictEqual(c[1], { people: [{ name: 'A', code: 'AAAAAA' }] });
   assert.ok(calls.at(-1).url.includes('select=name,code') && !calls.at(-1).url.includes('give_to'), 'codes query never selects matches');
+  // --- lookup / update
+  reply = url => url.includes('ss_settings') ? [200, [{ drawn: false }]] : [200, [{ name: 'A', wishlist: 'w', notes: '', date: '2026-12-04' }]];
+  const L = await handle('POST', 'lookup', { code: 'a1b2c3' });
+  assert.strictEqual(L[0], 200); assert.strictEqual(L[1].entry.name, 'A'); assert.strictEqual(L[1].code, 'A1B2C3');
+  assert.strictEqual((await handle('POST', 'lookup', { code: "1' or '1" }))[0], 404);
+  reply = url => url.includes('ss_settings') ? [200, [{ drawn: false }]] : [200, []];
+  assert.strictEqual((await handle('POST', 'lookup', { code: 'ABCDEF' }))[0], 404);
+
+  reply = () => [200, null];
+  assert.strictEqual((await handle('POST', 'update', { code: 'A1B2C3', name: 'A2', wishlist: 'x', date: '2026-12-11' }))[0], 200);
+  const upd = JSON.parse(calls.at(-1).opts.body); assert.strictEqual(upd.p_code, 'A1B2C3'); assert.strictEqual(upd.p_name, 'A2');
+  assert.strictEqual((await handle('POST', 'update', { code: 'bad', name: 'A', wishlist: 'x', date: '2026-12-11' }))[0], 404);
+  assert.strictEqual((await handle('POST', 'update', { code: 'A1B2C3', name: '', wishlist: 'x', date: '2026-12-11' }))[0], 400);
+  reply = () => [400, { message: 'DRAWN' }];
+  assert.strictEqual((await handle('POST', 'update', { code: 'A1B2C3', name: 'A', wishlist: 'x', date: '2026-12-11' }))[0], 409);
+  reply = () => [400, { message: 'NOT_FOUND' }];
+  assert.strictEqual((await handle('POST', 'update', { code: 'A1B2C3', name: 'A', wishlist: 'x', date: '2026-12-11' }))[0], 404);
+  reply = () => [409, { code: '23505', message: 'duplicate key ... "ss_participants_name_key"' }];
+  assert.strictEqual((await handle('POST', 'update', { code: 'A1B2C3', name: 'B', wishlist: 'x', date: '2026-12-11' }))[0], 409);
   console.log('handler OK');
 })().catch(e => { console.error(e); process.exit(1); });
