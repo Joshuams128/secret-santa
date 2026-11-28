@@ -48,9 +48,8 @@ function renderJoinCard() {
     $('welcomeBack').textContent = 'Names are drawn! You can still change your wish list and notes — whoever drew you will see the update when they check their match.';
     $('welcomeBack').classList.remove('hide');
   } else if (lateDoor) {
-    $('joinTitle').textContent = 'Join as a late player';
-    $('welcomeBack').textContent = 'Names are already drawn, but the organizer has opened one spot for a late player. Join below and you’ll be matched right away.';
-    $('welcomeBack').classList.remove('hide');
+    $('joinTitle').textContent = 'Join the fun';
+    $('welcomeBack').classList.add('hide');
   } else if (drawn) {
     $('joinTitle').textContent = 'Already joined?';
     $('welcomeBack').textContent = 'Names have been drawn, so no new players can join. If you’re in, load your entry to update your wish list.';
@@ -132,7 +131,7 @@ $('revealForm').onsubmit = async e => {
       <strong>Wish list</strong><pre>${esc(r.match.wishlist)}</pre>
       ${r.match.notes ? `<strong>Their notes</strong><pre>${esc(r.match.notes)}</pre>` : ''}
       <p>Your meet-up date: <strong>${label[r.date]}</strong></p>
-      ${r.rematched ? '<p class="note">👋 Heads up: a late player joined after the draw, so your match was updated. This is your final match — please use this one!</p>' : ''}`;
+      ${r.rematched ? '<p class="note">👋 Heads up: your match was updated. This is your final match — please use this one!</p>' : ''}`;
     $('result').classList.remove('hide');
   } catch (err) { $('revealMsg').textContent = err.message; }
 };
