@@ -20,7 +20,7 @@ async function refresh() {
       `<div><input type="radio" name="date" id="d${i}" value="${d.id}" required><label for="d${i}"><span>${d.label.split(', ')[0]}</span><b>${d.label.split(', ')[1]}</b><small id="t${i}"></small></label></div>`).join('');
   }
   state.dates.forEach((d, i) => { $('t' + i).textContent = `${state.tally[d.id]} going`; });
-  $('joinCard').classList.toggle('hide', state.drawn);
+  renderJoinCard();
   $('drawStatus').textContent = state.drawn
     ? 'Names have been drawn! Enter your code to see who you got.'
     : 'Names haven’t been drawn yet — check back once everyone has joined.';
@@ -32,24 +32,48 @@ function showMyCode(code) {
   $('myCode').textContent = code; $('code').value = code;
   $('codeCard').classList.remove('hide');
 }
+// One place that decides what the join / edit card looks like.
+function renderJoinCard() {
+  if (!state) return;
+  const drawn = state.drawn, editing = !!myCode;
+  const lockCore = drawn && editing;               // after the draw: only wish list + notes are editable
+  $('name').disabled = lockCore;
+  document.querySelectorAll('input[name=date]').forEach(r => { r.disabled = lockCore; });
+  $('joinForm').classList.toggle('hide', drawn && !editing);
+  $('joinCard').classList.remove('hide');
+  $('haveCode').classList.toggle('hide', editing);
+  if (drawn && editing) {
+    $('joinTitle').textContent = 'Update your wish list';
+    $('welcomeBack').textContent = 'Names are drawn! You can still change your wish list and notes — whoever drew you will see the update when they check their match.';
+    $('welcomeBack').classList.remove('hide');
+  } else if (drawn) {
+    $('joinTitle').textContent = 'Already joined?';
+    $('welcomeBack').textContent = 'Names have been drawn, so no new players can join. If you’re in, load your entry to update your wish list.';
+    $('welcomeBack').classList.remove('hide');
+  } else if (editing) {
+    $('joinTitle').textContent = 'Edit your entry';
+    $('welcomeBack').textContent = `Welcome back, ${$('name').value.trim()}! Change anything below until names are drawn.`;
+    $('welcomeBack').classList.remove('hide');
+  } else {
+    $('joinTitle').textContent = 'Join the fun';
+    $('welcomeBack').classList.add('hide');
+  }
+  $('joinBtn').textContent = editing ? 'Save changes' : 'Join Secret Santa';
+}
+
 // Switch the join card into "edit my entry" mode and fill it in.
 function enterEditMode(entry, code) {
   myCode = code; store.set('santaCode', code);
   $('name').value = entry.name; $('wishlist').value = entry.wishlist; $('pnotes').value = entry.notes;
   const radio = document.querySelector(`input[name=date][value="${entry.date}"]`);
   if (radio) radio.checked = true;
-  $('joinTitle').textContent = 'Edit your entry';
-  $('welcomeBack').textContent = `Welcome back, ${entry.name}! Change anything below until names are drawn.`;
-  $('welcomeBack').classList.remove('hide');
-  $('joinBtn').textContent = 'Save changes';
-  $('haveCode').classList.add('hide');
   showMyCode(code);
+  renderJoinCard();
 }
 function leaveEditMode() {
   myCode = null; store.set('santaCode', '');
-  $('joinTitle').textContent = 'Join the fun'; $('welcomeBack').classList.add('hide');
-  $('joinBtn').textContent = 'Join Secret Santa'; $('haveCode').classList.remove('hide');
   $('codeCard').classList.add('hide');
+  renderJoinCard();
 }
 
 $('joinForm').onsubmit = async e => {
@@ -62,7 +86,7 @@ $('joinForm').onsubmit = async e => {
   try {
     if (myCode) {
       await api('update', { code: myCode, ...entry });
-      $('joinMsg').textContent = 'Saved ✓'; $('welcomeBack').textContent = `Welcome back, ${entry.name.trim()}! Change anything below until names are drawn.`;
+      $('joinMsg').textContent = 'Saved ✓'; renderJoinCard();
     } else {
       const { code } = await api('join', entry);
       enterEditMode({ ...entry, name: entry.name.trim() }, code);
@@ -71,7 +95,7 @@ $('joinForm').onsubmit = async e => {
     }
     refresh();
   } catch (err) {
-    if (myCode && /not found/i.test(err.message)) { leaveEditMode(); err = new Error('The organizer reset the game, so please join again.'); }
+    if (myCode && /not found/i.test(err.message)) { leaveEditMode(); refresh(); err = new Error('The organizer reset the game, so please join again.'); }
     $('joinMsg').textContent = err.message; $('joinMsg').className = 'msg err';
   }
 };
@@ -80,7 +104,6 @@ $('joinForm').onsubmit = async e => {
 async function loadEntry(code, quiet) {
   try {
     const r = await api('lookup', { code });
-    if (r.drawn) { myCode = r.code; store.set('santaCode', r.code); $('code').value = r.code; return; }
     enterEditMode(r.entry, r.code);
   } catch (err) {
     if (quiet) { if (/not found/i.test(err.message)) store.set('santaCode', ''); }
