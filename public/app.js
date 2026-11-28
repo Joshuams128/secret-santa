@@ -20,7 +20,7 @@ async function refresh() {
       `<div><input type="radio" name="date" id="d${i}" value="${d.id}" required><label for="d${i}"><span>${d.label.split(', ')[0]}</span><b>${d.label.split(', ')[1]}</b><small id="t${i}"></small></label></div>`).join('');
   }
   state.dates.forEach((d, i) => { $('t' + i).textContent = `${state.tally[d.id]} going`; });
-  renderJoinCard();
+  renderJoinCard(); if (typeof renderLateBtn === 'function') renderLateBtn();
   $('drawStatus').textContent = state.drawn
     ? 'Names have been drawn! Enter your code to see who you got.'
     : 'Names haven’t been drawn yet — check back once everyone has joined.';
@@ -39,12 +39,17 @@ function renderJoinCard() {
   const lockCore = drawn && editing;               // after the draw: only wish list + notes are editable
   $('name').disabled = lockCore;
   document.querySelectorAll('input[name=date]').forEach(r => { r.disabled = lockCore; });
-  $('joinForm').classList.toggle('hide', drawn && !editing);
+  const lateDoor = drawn && !editing && state.lateOpen;
+  $('joinForm').classList.toggle('hide', drawn && !editing && !lateDoor);
   $('joinCard').classList.remove('hide');
   $('haveCode').classList.toggle('hide', editing);
   if (drawn && editing) {
     $('joinTitle').textContent = 'Update your wish list';
     $('welcomeBack').textContent = 'Names are drawn! You can still change your wish list and notes — whoever drew you will see the update when they check their match.';
+    $('welcomeBack').classList.remove('hide');
+  } else if (lateDoor) {
+    $('joinTitle').textContent = 'Join as a late player';
+    $('welcomeBack').textContent = 'Names are already drawn, but the organizer has opened one spot for a late player. Join below and you’ll be matched right away.';
     $('welcomeBack').classList.remove('hide');
   } else if (drawn) {
     $('joinTitle').textContent = 'Already joined?';
@@ -126,7 +131,8 @@ $('revealForm').onsubmit = async e => {
       <h2 style="font-size:1.6rem">🎁 ${esc(r.match.name)}</h2>
       <strong>Wish list</strong><pre>${esc(r.match.wishlist)}</pre>
       ${r.match.notes ? `<strong>Their notes</strong><pre>${esc(r.match.notes)}</pre>` : ''}
-      <p>Your meet-up date: <strong>${label[r.date]}</strong></p>`;
+      <p>Your meet-up date: <strong>${label[r.date]}</strong></p>
+      ${r.rematched ? '<p class="note">👋 Heads up: a late player joined after the draw, so your match was updated. This is your final match — please use this one!</p>' : ''}`;
     $('result').classList.remove('hide');
   } catch (err) { $('revealMsg').textContent = err.message; }
 };
@@ -142,7 +148,7 @@ async function admin(action, extra = {}, confirmMsg) {
 function setUnlocked(on) {
   $('orgTools').classList.toggle('hide', !on);
   $('unlockForm').classList.toggle('hide', on);
-  if (!on) { adminPin = ''; $('pin').value = ''; $('newNotes').value = ''; $('codesList').innerHTML = ''; $('codesList').classList.add('hide'); }
+  if (!on) { adminPin = ''; $('pin').value = ''; $('newNotes').value = ''; $('codesList').innerHTML = ''; $('codesList').classList.add('hide'); $('keepList').textContent = ''; }
 }
 $('orgLink').onclick = () => {
   $('orgLinkWrap').classList.add('hide'); $('orgCard').classList.remove('hide');
@@ -150,7 +156,7 @@ $('orgLink').onclick = () => {
 };
 $('unlockForm').onsubmit = async e => {
   e.preventDefault(); adminPin = $('pin').value;
-  if (await admin('check')) { setUnlocked(true); $('newNotes').value = state.notes; $('adminMsg').textContent = ''; }
+  if (await admin('check')) { setUnlocked(true); renderLateBtn(); loadKeep(); $('newNotes').value = state.notes; $('adminMsg').textContent = ''; }
   else adminPin = '';
 };
 $('lockBtn').onclick = () => { setUnlocked(false); $('adminMsg').textContent = ''; $('orgCard').classList.add('hide'); $('orgLinkWrap').classList.remove('hide'); };
@@ -162,6 +168,37 @@ $('codesBtn').onclick = async () => {
       : '<li>No one has joined yet.</li>';
     $('codesList').classList.remove('hide'); $('adminMsg').textContent = '';
   } catch (err) { $('adminMsg').textContent = err.message; $('adminMsg').className = 'msg err'; }
+};
+async function loadKeep() {
+  if (!adminPin || !state?.drawn) return;
+  try {
+    const { people } = await api('admin/people', { pin: adminPin });
+    const box = $('keepList'); box.textContent = '';
+    people.forEach(p => {
+      const label = document.createElement('label'), cb = document.createElement('input'), span = document.createElement('span');
+      cb.type = 'checkbox'; cb.value = p.name; cb.checked = p.keep_match; span.textContent = p.name;
+      label.append(cb, span); box.append(label);
+    });
+  } catch (err) { $('adminMsg').textContent = err.message; $('adminMsg').className = 'msg err'; }
+}
+$('keepList').onchange = async e => {
+  const names = [...$('keepList').querySelectorAll('input:checked')].map(i => i.value);
+  const ok = await admin('protect', { names });
+  if (ok) $('adminMsg').textContent = `${names.length} marked as already bought ✓`;
+  else { e.target.checked = !e.target.checked; }   // roll back the tick the server refused
+};
+function renderLateBtn() {
+  const open = !!state?.lateOpen;
+  $('lateBtn').classList.toggle('hide', !state?.drawn);
+  $('keepBox').classList.toggle('hide', !state?.drawn || !adminPin);
+  $('lateBtn').textContent = open ? '🚪 Late signup is OPEN — tap to close' : '🚪 Allow one late player';
+}
+$('lateBtn').onclick = async () => {
+  const open = !state.lateOpen;
+  if (open && !confirm('Open ONE spot for a late player? They’ll be slipped into the circle, and one random person’s match will change. It closes by itself after they join.')) return;
+  if (await admin('late', { open })) {
+    $('adminMsg').textContent = open ? 'Open for one late player. Share the link — it closes automatically after they join. Then ask everyone to re-check their match.' : 'Late signup closed.';
+  }
 };
 $('saveNotes').onclick = () => admin('notes', { notes: $('newNotes').value });
 $('drawBtn').onclick = () => admin('draw', {}, 'Draw names now? No one can join afterward.');

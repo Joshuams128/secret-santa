@@ -57,5 +57,32 @@ const { handle } = require('./lib/handler');
   assert.strictEqual((await handle('POST', 'update', { code: 'A1B2C3', name: 'A', wishlist: 'x', date: '2026-12-11' }))[0], 404);
   reply = () => [409, { code: '23505', message: 'duplicate key ... "ss_participants_name_key"' }];
   assert.strictEqual((await handle('POST', 'update', { code: 'A1B2C3', name: 'B', wishlist: 'x', date: '2026-12-11' }))[0], 409);
+  // --- late door
+  reply = () => [200, null];
+  assert.strictEqual((await handle('POST', 'admin/late', { open: true }))[0], 403);
+  assert.strictEqual((await handle('POST', 'admin/late', { pin: '1234', open: true }))[0], 200);
+  assert.strictEqual(JSON.parse(calls.at(-1).opts.body).p_open, true);
+  await handle('POST', 'admin/late', { pin: '1234' });                     // missing flag must CLOSE, never open
+  assert.strictEqual(JSON.parse(calls.at(-1).opts.body).p_open, false);
+  reply = () => [400, { message: 'NOT_DRAWN' }];
+  assert.strictEqual((await handle('POST', 'admin/late', { pin: '1234', open: true }))[0], 409);
+  reply = url => url.includes('ss_settings') ? [200, [{ notes: 'n', drawn: true, late_open: true }]] : [200, []];
+  assert.strictEqual((await handle('GET', 'state'))[1].lateOpen, true);
+  reply = url => url.includes('ss_settings') ? [200, [{ drawn: true }]] : url.includes('code=eq') ? [200, [{ name: 'A', date: '2026-12-13', give_to: 'x', rematched: true }]] : [200, [{ name: 'B', wishlist: 'w', notes: '' }]];
+  assert.strictEqual((await handle('POST', 'reveal', { code: 'A1B2C3' }))[1].rematched, true);
+  // --- protect people who already bought
+  reply = () => [200, null];
+  assert.strictEqual((await handle('POST', 'admin/protect', { names: ['A'] }))[0], 403);
+  assert.strictEqual((await handle('POST', 'admin/protect', { pin: '1234', names: ['Amy', 'bob'] }))[0], 200);
+  assert.deepStrictEqual(JSON.parse(calls.at(-1).opts.body), { p_names: ['Amy', 'bob'] });
+  await handle('POST', 'admin/protect', { pin: '1234', names: 'not-an-array' });          // junk input = protect nobody
+  assert.deepStrictEqual(JSON.parse(calls.at(-1).opts.body), { p_names: [] });
+  reply = () => [400, { message: 'NO_ELIGIBLE' }];
+  assert.strictEqual((await handle('POST', 'admin/protect', { pin: '1234', names: ['A'] }))[0], 409);
+  assert.strictEqual((await handle('POST', 'admin/late', { pin: '1234', open: true }))[0], 409);
+  reply = () => [200, [{ name: 'Amy', keep_match: true }]];
+  assert.strictEqual((await handle('POST', 'admin/people', {}))[0], 403);
+  assert.deepStrictEqual((await handle('POST', 'admin/people', { pin: '1234' }))[1], { people: [{ name: 'Amy', keep_match: true }] });
+  assert.ok(!calls.at(-1).url.includes('give_to'), 'people list never selects matches');
   console.log('handler OK');
 })().catch(e => { console.error(e); process.exit(1); });
