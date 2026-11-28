@@ -84,5 +84,7 @@ const { handle } = require('./lib/handler');
   assert.strictEqual((await handle('POST', 'admin/people', {}))[0], 403);
   assert.deepStrictEqual((await handle('POST', 'admin/people', { pin: '1234' }))[1], { people: [{ name: 'Amy', keep_match: true }] });
   assert.ok(!calls.at(-1).url.includes('give_to'), 'people list never selects matches');
+  reply = () => [400, { message: 'RESERVED' }];
+  assert.strictEqual((await handle('POST', 'join', { name: 'Sam', wishlist: 'x', date: '2026-12-13' }))[0], 409);
   console.log('handler OK');
 })().catch(e => { console.error(e); process.exit(1); });
